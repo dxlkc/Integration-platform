@@ -80,7 +80,7 @@ public class OneNetPush {
                             Device device = mongoDao.findDeviceById(deviceId);
                             //若该设备已存在则更新状态，否则新增
                             if (null != device) {
-                                mongoDao.updateState(deviceId, loginInfo.getStatus());
+                                mongoDao.updateDeviceState(deviceId, loginInfo.getStatus());
                             } else {
                                 JoinInfo joinInfo = JoinInfo.builder()
                                         .imei("")
@@ -91,7 +91,7 @@ public class OneNetPush {
                                         .joinInfo(joinInfo)
                                         .joinType("onenet")
                                         .build();
-                                if (mongoDao.save(newDevice) != null){
+                                if (mongoDao.saveDevice(newDevice) != null){
                                     System.out.println("device save success");
                                 }
                             }
@@ -143,8 +143,8 @@ public class OneNetPush {
                                     .value(dataPoint.getValue())
                                     .build();
                             JSONObject message = JSONObject.fromObject(mqData);
-                            rabbitTemplate.convertAndSend(message.toString());
-//                            pushservice.push(message.toString());
+                            //rabbitTemplate.convertAndSend(message.toString());
+                            pushservice.push(message.toString());
                         }
                     });
 
@@ -152,16 +152,32 @@ public class OneNetPush {
                     MyThreadPoolExecutor.getInstance().getMyThreadPoolExecutor().execute(new Runnable() {
                         @Override
                         public void run() {
+                            //判断设备是否存在  不存在则新建
+                            Device device = mongoDao.findDeviceById(deviceId);
+                            if (device == null){
+                                JoinInfo joinInfo = JoinInfo.builder()
+                                        .imei("")
+                                        .build();
+                                Device newDevice = Device.builder()
+                                        .deviceId(deviceId)
+                                        .state(1)
+                                        .joinInfo(joinInfo)
+                                        .joinType("onenet")
+                                        .build();
+                                if (mongoDao.saveDevice(newDevice) != null){
+                                    System.out.println("device save success");
+                                }
+                            }
+
                             //修改最后上报时间 和 sensor 对应的值 和 状态
                             Sensor sensor = mongoDao.findSensorByDeviceIdAndType(deviceId, type);
 
                             if (null != sensor) {
                                 //sensor 修改值
-                                mongoDao.updateValue(deviceId, type, dataPoint.getValue().toString());
+                                mongoDao.updateSensorValue(deviceId, type, dataPoint.getValue().toString());
                                 //device 修改最后运行时间
-                                //BigInteger可能有问题
-                                mongoDao.updateTime(deviceId, dataPoint.getAt().toString());
-                                mongoDao.updateState(deviceId,1);
+                                mongoDao.updateDeviceTime(deviceId, dataPoint.getAt().toString());
+                                mongoDao.updateDeviceState(deviceId,1);
                             } else {
                                 //添加新sensor
                                 SensorInfo sensorInfo = SensorInfo.builder()
@@ -176,7 +192,7 @@ public class OneNetPush {
                                         .value(dataPoint.getValue().toString())
                                         .info(sensorInfo)
                                         .build();
-                                if (mongoDao.save(newSensor) != null){
+                                if (mongoDao.saveSensor(newSensor) != null){
                                     System.out.println("sensor save success");
                                 }
                             }
