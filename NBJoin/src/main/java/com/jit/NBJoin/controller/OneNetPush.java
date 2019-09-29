@@ -124,7 +124,7 @@ public class OneNetPush {
                             String measurement = deviceId + "_" + type;
                             Map<String, String> tag = new HashMap<>();
                             Map<String, Object> field = new HashMap<>();
-                            field.put("value", dataPoint.getValue());
+                            field.put("value", dataPoint.getValue().toString());
 
                             JSONObject tags = JSONObject.fromObject(tag);
                             JSONObject fields = JSONObject.fromObject(field);
