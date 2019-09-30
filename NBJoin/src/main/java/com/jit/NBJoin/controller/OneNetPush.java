@@ -83,7 +83,7 @@ public class OneNetPush {
                                 mongoDao.updateDeviceState(deviceId, loginInfo.getStatus());
                             } else {
                                 JoinInfo joinInfo = JoinInfo.builder()
-                                        .imei("")
+                                        .imei(loginInfo.getImei())
                                         .build();
                                 Device newDevice = Device.builder()
                                         .deviceId(deviceId)
@@ -156,7 +156,7 @@ public class OneNetPush {
                             Device device = mongoDao.findDeviceById(deviceId);
                             if (device == null){
                                 JoinInfo joinInfo = JoinInfo.builder()
-                                        .imei("")
+                                        .imei(dataPoint.getImei())
                                         .build();
                                 Device newDevice = Device.builder()
                                         .deviceId(deviceId)
