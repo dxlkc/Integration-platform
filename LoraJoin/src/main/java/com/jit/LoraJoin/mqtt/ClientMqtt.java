@@ -1,6 +1,8 @@
 package com.jit.LoraJoin.mqtt;
 
+import com.jit.LoraJoin.config.LoraTopicConfig;
 import com.jit.LoraJoin.config.MqttConfig;
+import com.jit.LoraJoin.util.UID;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -12,22 +14,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientMqtt {
     //日志记录器
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private final String HOST = Config.getHost();
-    private static final String TOPIC1 = "application/2/device/+/rx";
     private static String clientid;
     private MqttClient client;
 
-    private static ClientMqtt clientMqtt = new ClientMqtt();
+    private static ClientMqtt clientMqtt = null;
 
+    private ClientMqtt(){}
     public static ClientMqtt getInstance() {
-        Random random = new Random();
-        clientid = String.valueOf(random.nextInt(10000));
+        if (null == clientMqtt){
+            clientMqtt = new ClientMqtt();
+        }
+        clientid = UID.getUid();
         return clientMqtt;
     }
 
@@ -58,10 +64,22 @@ public class ClientMqtt {
             logger.debug("mqtt连接成功");
         }
 
-        //订阅消息
-        int[] qos = {1};
-        String[] topic = {TOPIC1};
-        client.subscribe(topic, qos);
+        //获取订阅主题
+        int length = Config.getTopics().size();
+        int i = 0;
+
+        String[] topics = new String[length];
+        for (String topic : Config.getTopics()) {
+            topics[i++] = topic;
+        }
+
+        int[] qos = new int[length];
+        for (i = 0; i < length; i++){
+            qos[i] = 1;
+        }
+
+        //订阅
+        client.subscribe(topics, qos);
     }
 
     //发布信息
@@ -94,6 +112,8 @@ public class ClientMqtt {
     private static class Config{
         @Autowired
         private MqttConfig mqttConfig;
+        @Autowired
+        private LoraTopicConfig loraTopicConfig;
 
         private static Config config;
 
@@ -105,6 +125,10 @@ public class ClientMqtt {
 
         public static String getHost(){
             return config.mqttConfig.getHost();
+        }
+
+        public static List<String> getTopics(){
+            return config.loraTopicConfig.getTopics();
         }
 
     }
