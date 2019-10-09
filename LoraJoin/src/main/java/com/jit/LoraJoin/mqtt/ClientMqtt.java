@@ -62,6 +62,8 @@ public class ClientMqtt {
         if (!client.isConnected()) {
             client.connect(options);
             logger.debug("mqtt连接成功");
+        } else {
+            logger.debug("mqtt已连接");
         }
 
         //获取订阅主题
