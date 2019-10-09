@@ -110,7 +110,7 @@ public class LoraServiceImpl implements LoraService {
     private void updateInfluxDB(String measurement, Object value) {
         Map<String, String> tag = new HashMap<>();
         Map<String, Object> field = new HashMap<>();
-        field.put("value", value);
+        field.put("value", value.toString());
 
         JSONObject tags = JSONObject.fromObject(tag);
         JSONObject fields = JSONObject.fromObject(field);
