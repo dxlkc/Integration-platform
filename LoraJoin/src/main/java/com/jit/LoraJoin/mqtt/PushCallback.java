@@ -18,8 +18,6 @@ import javax.annotation.PostConstruct;
 
 @Log4j2
 public class PushCallback implements MqttCallback {
-    //日志记录器
-    private Logger logger = LoggerFactory.getLogger(getClass());
 
     //influxDB中的measurement是唯一的
     //表固定前缀
@@ -28,14 +26,14 @@ public class PushCallback implements MqttCallback {
     //连接断开
     @Override
     public void connectionLost(Throwable throwable) {
-        logger.warn("连接断开，可以重连...");
+        log.warn("连接断开，可以重连...");
         while (true) {
             try {
                 Thread.sleep(2000);
-                logger.warn("正在尝试重连...");
+                log.warn("正在尝试重连...");
                 ClientMqtt.getInstance().connect();
             } catch (MqttException e) {
-                logger.warn("重连失败...");
+                log.warn("重连失败...");
                 //打印日志
                 continue;
             } catch (Exception e) {
@@ -48,13 +46,13 @@ public class PushCallback implements MqttCallback {
     //发送信息成功时 回调
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-        logger.info("deliveryComplete-----" + iMqttDeliveryToken.isComplete());
+        log.info("deliveryComplete-----" + iMqttDeliveryToken.isComplete());
     }
 
     //接收信息成功时 回调
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        System.out.println(mqttMessage.toString());
+        log.info(mqttMessage.toString());
 
         MyThreadPoolExecutor.getInstance().getMyThreadPoolExecutor().execute(new Runnable() {
             @Override
@@ -72,14 +70,14 @@ public class PushCallback implements MqttCallback {
 
                 if (jsonObject2.isNullObject()) {
                     //seeed处理
-                    System.out.println("-----doSeeed-----");
+                    log.info("-----doSeeed-----");
                     String data = jsonObject.getString("data");
                     if (!"".equals(data)){
                         Service.service.doSeeed(devEUI,data);
                     }
                 } else {
                     //原生lora处理
-                    System.out.println("-----doConsum-----");
+                    log.info("-----doConsum-----");
                     Service.service.doConsum(devEUI,jsonObject2);
                 }
             }

@@ -1,5 +1,6 @@
 package com.jit.InfluxDBService.config;
 
+import lombok.extern.log4j.Log4j2;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.slf4j.Logger;
@@ -11,9 +12,8 @@ import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @PropertySource(value = "classpath:config/influxdb.properties")
+@Log4j2
 public class InfluxdbConfig {
-    //日志记录器
-    private Logger logger = LoggerFactory.getLogger(getClass());
 
     @Value("${influxdb.url}")
     private String url;
@@ -32,9 +32,9 @@ public class InfluxdbConfig {
 
     @Bean(name = "influxdb")
     public InfluxDB InfluxdbConnect() {
-        logger.debug("influxdb : connectting to "+"http://"+url+":"+port);
+        log.debug("influxdb : connectting to "+"http://"+url+":"+port);
         InfluxDB influxDB = InfluxDBFactory.connect("http://"+url+":"+port, username, password);
-        logger.info("influxdb : connect success");
+        log.info("influxdb : connect success");
         return influxDB;
     }
 
