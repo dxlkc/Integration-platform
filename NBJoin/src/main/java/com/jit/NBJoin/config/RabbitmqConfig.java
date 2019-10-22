@@ -1,7 +1,6 @@
 package com.jit.NBJoin.config;
 
-import com.rabbitmq.client.Channel;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Message;
@@ -11,20 +10,20 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-@Slf4j
+@Log4j2
 @Configuration
 public class RabbitmqConfig {
 
     //创建交换机
     @Bean
-    public DirectExchange JitExchange(){
-        log.info("RabbitMq-Exchange-Name : {}","jit.exchange");
-        return new DirectExchange("jit.exchange",true,false);
+    public DirectExchange JitExchange() {
+        log.info("RabbitMq-Exchange-Name : {}", "jit.exchange");
+        return new DirectExchange("jit.exchange", true, false);
     }
 
     //用来收发消息
     @Bean
-    public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory){   //虽然报红  但是能找到这个bean 很奇怪
+    public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {   //虽然报红  但是能找到这个bean 很奇怪
         connectionFactory.createConnection();
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMandatory(true);
@@ -36,13 +35,13 @@ public class RabbitmqConfig {
         rabbitTemplate.setConfirmCallback(new RabbitTemplate.ConfirmCallback() {
             @Override
             public void confirm(CorrelationData correlationData, boolean ack, String cause) {
-                log.info("消息发送成功:correlationData({}),ack({}),cause({})",correlationData,ack,cause);
+                log.info("消息发送成功:correlationData({}),ack({}),cause({})", correlationData, ack, cause);
             }
         });
         rabbitTemplate.setReturnCallback(new RabbitTemplate.ReturnCallback() {
             @Override
             public void returnedMessage(Message message, int replyCode, String replyText, String exchange, String routingKey) {
-                log.info("消息丢失:exchange({}),route({}),replyCode({}),replyText({}),message:{}",exchange,routingKey,replyCode,replyText,message);
+                log.info("消息丢失:exchange({}),route({}),replyCode({}),replyText({}),message:{}", exchange, routingKey, replyCode, replyText, message);
             }
         });
         return rabbitTemplate;

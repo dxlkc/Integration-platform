@@ -16,7 +16,7 @@ import com.jit.NBJoin.model.onenet.updata.LoginInfo;
 import com.jit.NBJoin.model.Lwm2mObject;
 import com.jit.NBJoin.util.MyThreadPoolExecutor;
 import com.jit.NBJoin.util.Util;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONObject;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +38,7 @@ import java.util.Map;
 
 @RestController
 @EnableAutoConfiguration
-@Slf4j
+@Log4j2
 public class OneNetPush {
     @Autowired
     private InfluxDao influxDao;
@@ -92,7 +92,7 @@ public class OneNetPush {
                                         .joinType("onenet")
                                         .build();
                                 if (mongoDao.saveDevice(newDevice) != null){
-                                    System.out.println("device save success");
+                                    log.info("device save success");
                                 }
                             }
                         }
@@ -102,7 +102,7 @@ public class OneNetPush {
                     //System.out.println("下发响应");
                 } else {
                     DataPoint dataPoint = (DataPoint) JSONObject.toBean(jsonObject, DataPoint.class);
-                    System.out.println(dataPoint.toString());
+                    log.info(dataPoint.toString());
 
                     //解析 objId、instId、resId
                     String[] code = dataPoint.getDs_id().split("_");
@@ -110,7 +110,7 @@ public class OneNetPush {
                     Integer instId = Integer.valueOf(code[1]);
                     Integer resId = Integer.valueOf(code[2]);
                     String type = Lwm2mObject.Type(objId);
-                    System.out.println("objId:" + objId + " instId:" + instId + " resId:" + resId);
+                    log.debug("objId:" + objId + " instId:" + instId + " resId:" + resId);
 
                     //deviceId
                     String deviceId = dataPoint.getDev_id().toString();
@@ -165,7 +165,7 @@ public class OneNetPush {
                                         .joinType("onenet")
                                         .build();
                                 if (mongoDao.saveDevice(newDevice) != null){
-                                    System.out.println("device save success");
+                                    log.info("device save success");
                                 }
                             }
 
@@ -193,7 +193,7 @@ public class OneNetPush {
                                         .info(sensorInfo)
                                         .build();
                                 if (mongoDao.saveSensor(newSensor) != null){
-                                    System.out.println("sensor save success");
+                                    log.info("sensor save success");
                                 }
                             }
                         }

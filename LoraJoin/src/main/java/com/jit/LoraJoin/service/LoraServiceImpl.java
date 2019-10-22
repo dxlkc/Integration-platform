@@ -7,6 +7,7 @@ import com.jit.LoraJoin.model.LoraData;
 import com.jit.LoraJoin.model.mongodb.device.Device;
 import com.jit.LoraJoin.model.mongodb.sensor.Sensor;
 import com.jit.LoraJoin.model.rabbitmq.MqData;
+import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.tomcat.util.buf.HexUtils;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@Log4j2
 public class LoraServiceImpl implements LoraService {
     @Resource
     private InfluxDao influxDao;
@@ -39,7 +41,7 @@ public class LoraServiceImpl implements LoraService {
     @Override
     public void doSeeed(String devEUI, String base64String) {
         byte[] data = Base64.decodeBase64(base64String);
-        System.out.println(HexUtils.toHexString(data));
+        log.info(HexUtils.toHexString(data));
 
         LoraData loraData = LoraData.getInstance();
 
@@ -53,7 +55,6 @@ public class LoraServiceImpl implements LoraService {
             typeArray[0] = data[2 + i * 7];
             typeArray[1] = data[1 + i * 7];
             String type0 = HexUtils.toHexString(typeArray);
-            System.out.println("type = " + type0);
 
             String type = loraData.get(type0);
             if (null == type) {
@@ -66,7 +67,6 @@ public class LoraServiceImpl implements LoraService {
             valueArray[2] = data[4 + i * 7];
             valueArray[3] = data[3 + i * 7];
             Float value = (float) (byteArrayToInt(valueArray)) / 1000.0f;
-            System.out.println("value = " + value.toString());
 
             //推送实时数据
             pushToMQ(devEUI,type,String.valueOf(value));
@@ -76,8 +76,9 @@ public class LoraServiceImpl implements LoraService {
 
             //终端 and 传感器模型存入mongodb
             updateMongoDB(devEUI, type, value);
+            log.debug("type : " + type + " value : " + value);
         }
-        System.out.println("----解析结束----");
+        log.info("----解析结束----" );
     }
 
     @Override
@@ -123,7 +124,6 @@ public class LoraServiceImpl implements LoraService {
         JSONObject message = JSONObject.fromObject(mqData);
         //rabbitTemplate.convertAndSend(message.toString());
         pushservice.push(message.toString());
-        System.out.println("发送实时！！！");
     }
 
     //添加新值

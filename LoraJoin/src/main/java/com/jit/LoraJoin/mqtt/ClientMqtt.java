@@ -3,24 +3,20 @@ package com.jit.LoraJoin.mqtt;
 import com.jit.LoraJoin.config.LoraTopicConfig;
 import com.jit.LoraJoin.config.MqttConfig;
 import com.jit.LoraJoin.util.UID;
+import lombok.extern.log4j.Log4j2;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
+@Log4j2
 public class ClientMqtt {
-    //日志记录器
-    private Logger logger = LoggerFactory.getLogger(getClass());
 
     private final String HOST = Config.getHost();
     private static String clientid;
@@ -61,9 +57,9 @@ public class ClientMqtt {
 
         if (!client.isConnected()) {
             client.connect(options);
-            logger.debug("mqtt连接成功");
+            log.debug("mqtt连接成功");
         } else {
-            logger.debug("mqtt已连接");
+            log.debug("mqtt已连接");
         }
 
         //获取订阅主题
@@ -100,7 +96,7 @@ public class ClientMqtt {
                 Thread.sleep(2000);
                 connect();
             } catch (MqttException e) {
-                logger.warn("无法连接MQTT代理服务器...");
+                log.warn("无法连接MQTT代理服务器...");
                 continue;
             } catch (Exception e) {
                 e.printStackTrace();
