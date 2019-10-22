@@ -1,10 +1,12 @@
 package com.jit.LoraJoin.service;
 
+import com.jit.LoraJoin.feignclient.Pushservice;
 import com.jit.LoraJoin.feignclient.influxservice.InfluxDao;
 import com.jit.LoraJoin.feignclient.mongoservice.MongoDao;
 import com.jit.LoraJoin.model.LoraData;
 import com.jit.LoraJoin.model.mongodb.device.Device;
 import com.jit.LoraJoin.model.mongodb.sensor.Sensor;
+import com.jit.LoraJoin.model.rabbitmq.MqData;
 import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.tomcat.util.buf.HexUtils;
@@ -21,6 +23,8 @@ public class LoraServiceImpl implements LoraService {
     private InfluxDao influxDao;
     @Resource
     private MongoDao mongoDao;
+    @Resource
+    private Pushservice pushservice;
 
     public static int byteArrayToInt(byte[] bytes) {
         int value = 0;
@@ -64,6 +68,9 @@ public class LoraServiceImpl implements LoraService {
             Float value = (float) (byteArrayToInt(valueArray)) / 1000.0f;
             System.out.println("value = " + value.toString());
 
+            //推送实时数据
+            pushToMQ(devEUI,type,String.valueOf(value));
+
             //数据存入influxdb
             updateInfluxDB(devEUI + "_" + type, value);
 
@@ -104,6 +111,19 @@ public class LoraServiceImpl implements LoraService {
                 }
             }
         }
+    }
+
+    //推送实时数据
+    private void pushToMQ(String devEUI, String type, String value){
+        MqData mqData = MqData.builder()
+                .device_id(devEUI)
+                .type(type)
+                .value(value)
+                .build();
+        JSONObject message = JSONObject.fromObject(mqData);
+        //rabbitTemplate.convertAndSend(message.toString());
+        pushservice.push(message.toString());
+        System.out.println("发送实时！！！");
     }
 
     //添加新值
