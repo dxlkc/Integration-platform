@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
 @EnableFeignClients
-public class LoraJoinApplication{
+public class LoraJoinApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(LoraJoinApplication.class, args);

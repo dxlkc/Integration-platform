@@ -1,12 +1,12 @@
 package com.jit.LoraJoin.service;
 
 import com.jit.LoraJoin.feignclient.Pushservice;
-import com.jit.LoraJoin.feignclient.influxservice.InfluxDao;
-import com.jit.LoraJoin.feignclient.mongoservice.MongoDao;
+import com.jit.LoraJoin.feignclient.dataservice.DataDao;
 import com.jit.LoraJoin.model.LoraData;
 import com.jit.LoraJoin.model.mongodb.device.Device;
 import com.jit.LoraJoin.model.mongodb.sensor.Sensor;
 import com.jit.LoraJoin.model.rabbitmq.MqData;
+import com.jit.LoraJoin.util.MyThreadPoolExecutor;
 import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
@@ -22,9 +22,7 @@ import java.util.Map;
 @Log4j2
 public class LoraServiceImpl implements LoraService {
     @Resource
-    private InfluxDao influxDao;
-    @Resource
-    private MongoDao mongoDao;
+    private DataDao dataDao;
     @Resource
     private Pushservice pushservice;
 
@@ -41,7 +39,7 @@ public class LoraServiceImpl implements LoraService {
     @Override
     public void doSeeed(String devEUI, String base64String) {
         byte[] data = Base64.decodeBase64(base64String);
-        log.info(HexUtils.toHexString(data));
+        log.info("data:{}", HexUtils.toHexString(data));
 
         LoraData loraData = LoraData.getInstance();
 
@@ -68,17 +66,24 @@ public class LoraServiceImpl implements LoraService {
             valueArray[3] = data[3 + i * 7];
             Float value = (float) (byteArrayToInt(valueArray)) / 1000.0f;
 
+            log.debug("type:{} , value:{}", type, value);
+
             //推送实时数据
-            pushToMQ(devEUI,type,String.valueOf(value));
+            MyThreadPoolExecutor.getInstance().getMyThreadPoolExecutor().execute(() -> {
+                pushToMQ(devEUI, type, String.valueOf(value));
+            });
 
             //数据存入influxdb
-            updateInfluxDB(devEUI + "_" + type, value);
+            MyThreadPoolExecutor.getInstance().getMyThreadPoolExecutor().execute(() -> {
+                updateInfluxDB(devEUI + "_" + type, value);
+            });
 
             //终端 and 传感器模型存入mongodb
-            updateMongoDB(devEUI, type, value);
-            log.debug("type : " + type + " value : " + value);
+            MyThreadPoolExecutor.getInstance().getMyThreadPoolExecutor().execute(() -> {
+                updateMongoDB(devEUI, type, value);
+            });
         }
-        log.info("----解析结束----" );
+        log.info("----解析结束----");
     }
 
     @Override
@@ -115,15 +120,15 @@ public class LoraServiceImpl implements LoraService {
     }
 
     //推送实时数据
-    private void pushToMQ(String devEUI, String type, String value){
+    private void pushToMQ(String devEUI, String type, String value) {
         MqData mqData = MqData.builder()
                 .device_id(devEUI)
                 .type(type)
                 .value(value)
                 .build();
         JSONObject message = JSONObject.fromObject(mqData);
-        //rabbitTemplate.convertAndSend(message.toString());
         pushservice.push(message.toString());
+        log.debug("push : devEUI={},type={},value={}", devEUI, type, value);
     }
 
     //添加新值
@@ -134,7 +139,8 @@ public class LoraServiceImpl implements LoraService {
 
         JSONObject tags = JSONObject.fromObject(tag);
         JSONObject fields = JSONObject.fromObject(field);
-        influxDao.insert(measurement, tags.toString(), fields.toString());
+        dataDao.insert(measurement, tags.toString(), fields.toString());
+        log.debug("influxdb : save to {},value={}", measurement, value);
     }
 
     //添加或修改 Device 和 Sensor
@@ -143,7 +149,8 @@ public class LoraServiceImpl implements LoraService {
         long currentTime = new Date().getTime();
         String timestr = String.valueOf(currentTime / 1000);
 
-        if (null == mongoDao.findDeviceById(devEUI)) {
+        //查找Device
+        if (null == dataDao.findDeviceById(devEUI)) {
             //存device
             Device device = Device.builder()
                     .deviceId(devEUI)
@@ -151,27 +158,30 @@ public class LoraServiceImpl implements LoraService {
                     .joinType("lora")
                     .lastRunTime(timestr)
                     .build();
-            Device dRes = mongoDao.save(device);
+            Device dRes = dataDao.save(device);
             if (null == dRes) {
                 System.out.println("Device save error");
             }
         }
 
-        if (null == mongoDao.findSensorByDeviceIdAndType(devEUI, type)) {
+        //查找Sensor
+        if (null == dataDao.findSensorByDeviceIdAndType(devEUI, type)) {
             Sensor sensor = Sensor.builder()
                     .sensorType(type)
                     .deviceId(devEUI)
                     .state(1)
                     .value(value.toString())
                     .build();
-            Sensor sRes = mongoDao.save(sensor);
+            Sensor sRes = dataDao.save(sensor);
             if (null == sRes) {
                 System.out.println("Sensor save error");
             }
         } else {
-            mongoDao.updateState(devEUI, 1);
-            mongoDao.updateTime(devEUI, timestr);
-            mongoDao.updateValue(devEUI, type, value.toString());
+            dataDao.updateState(devEUI, 1);
+            dataDao.updateTime(devEUI, timestr);
+            dataDao.updateValue(devEUI, type, value.toString());
         }
+
+        log.debug("mongodb : save devEUI={},type={},value={}", devEUI, type, value);
     }
 }
